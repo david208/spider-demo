@@ -63,7 +63,7 @@ public class HbaseUtils {
 			Map<String,List> map = new TreeMap<>();
 			for(Cell cell:result.rawCells()){
 				List l = gson.fromJson(Bytes.toString(cell.getValue()),ArrayList.class);
-				if(!Bytes.toString(cell.getQualifier()).equals("StrokeFollowup"))
+				if(Bytes.toString(cell.getQualifier()).equals("StrokeReport"))
 				map.put(Bytes.toString(cell.getQualifier()), l);
 				
 			}

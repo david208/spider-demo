@@ -144,15 +144,19 @@ public class CnstrokePageProcessor implements PageProcessor {
 
 					}
 				}
+
 				if (type.equals("StrokeFollowup")) {
 					List<String> v = new ArrayList<>();
 					for (String ill : ills) {
+						boolean marched = false;
 						for (int i = 0; i < names.size(); i++) {
 							if (ill.equals(names.get(i).trim().replace("：", ""))) {
 								v.add(values.get(i));
+								marched = true;
 								break;
 							}
 						}
+						if (!marched)
 							v.add("");
 					}
 					values = v;
@@ -160,8 +164,11 @@ public class CnstrokePageProcessor implements PageProcessor {
 				if (type.equals("PhysicalExam") && values.size() == 10) {
 					values.add(4, "");
 				}
-				if (type.equals("StrokeReport") && values.size() == 21) {
-					values.remove(13);
+				if (type.equals("StrokeReport")) {
+					values.add(6, table.$(".ACStudy", "allText").all().get(0));
+					if (values.size() == 22) {
+						values.remove(13);
+					}
 				}
 				if (type.equals("LifeStyle")) {
 					if (values.get(0).indexOf("无") >= 0) {
