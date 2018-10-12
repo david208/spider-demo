@@ -45,7 +45,7 @@ public class CnstrokePageProcessor implements PageProcessor {
 
 	// 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
 	private Site site = Site.me().setCycleRetryTimes(10).setRetryTimes(0).setSleepTime(3000).setTimeOut(5000)
-			.addCookie("ASP.NET_SessionId", "0i3hln4vq5pzcfzr3vyrxnlr");
+			.addCookie("ASP.NET_SessionId", "2iuklu435uffnheomw5vmchc");
 
 	@Override
 	public void process(Page page) {
@@ -71,15 +71,24 @@ public class CnstrokePageProcessor implements PageProcessor {
 				// FileOutputStream fileOutputStream = new
 				// FileOutputStream(file);
 				// fileOutputStream.write(page.getHtml().get().getBytes());
+				List<String> a= page.getHtml().xpath("//table//tr/td/a").all();
+				List<String> a1 = new ArrayList<>();
+				for(String ss:a){
+					if(ss.indexOf("FollowUpInfo")>=0){
+						a1.add(StringUtils.substringBetween(ss, ">", "</a>"));
+					}
+				}
 				String[] urls = StringUtils.substringsBetween(page.getHtml().toString(), "'档案详情','", "'");
+				int ii=0;
 				for (String url : urls) {
 					Request request2 = new Request("http://pro.cnstroke.com" + url.replace("amp;", ""));
 					request2.putExtra("step", 2);
+					request2.putExtra("sfId", a1.get(ii++));
 					page.addTargetRequest(request2);
 					// break;
 				}
 				int pageno = ((int) page.getRequest().getExtra("page")) + 1;
-				if (pageno > 1) {
+				if (pageno > 870) {
 					page.setSkip(true);
 					break;
 				}
@@ -97,22 +106,26 @@ public class CnstrokePageProcessor implements PageProcessor {
 				break;
 			/* logger.info(); */
 			case 2:
-
+			
 				Selectable div = page.getHtml().$("#content");
 
 				String id = StringUtils.substringBetween(div.get(), "（档案号：", "，");
+				HbaseUtils.addDate(id, "sf", Arrays.asList(new String[]{(String) page.getRequest().getExtra("sfId")}));
 				List<String> names = div.$(".active", "allText").all();
 				List<String> values = div.$(".tdColor", "allText").all();
-				for (int i = 0; i < names.size() - 1; i++) {
+				logger.info(Arrays.toString(names.toArray()));
+				/*for (int i = 0; i < names.size() - 1; i++) {
 					logger.info(names.get(i) + ":" + values.get(i));
 
-				}
-				boolean finalStrokeInfro = false;
+				}*/
+				boolean finalStrokeInfro = false,MRS =false;
 				for (String link : page.getHtml().$("#xxx").links().all()) {
 					if (link.indexOf("NeckUltrasound") >= 0)
 						continue;
 					if (link.indexOf("FinalStrokeInfro") >= 0)
 						finalStrokeInfro = true;
+					if (link.indexOf("MRS") >= 0)
+						MRS = true;
 					Request request2 = new Request(link);
 					request2.putExtra("step", 3);
 					request2.putExtra("id", id);
@@ -123,6 +136,12 @@ public class CnstrokePageProcessor implements PageProcessor {
 					Arrays.fill(temp, "");
 					HbaseUtils.addDate(id, "FinalStrokeInfro", Arrays.asList(temp));
 				}
+				if (!MRS) {
+					String[] temp = new String[2];
+					Arrays.fill(temp, "");
+					HbaseUtils.addDate(id, "MRS", Arrays.asList(temp));
+				}
+				
 				page.putField("info", values);
 				page.putField("type", "base");
 				page.putField("id", id);
@@ -138,12 +157,13 @@ public class CnstrokePageProcessor implements PageProcessor {
 					values = table.$("td:not(.active)", "allText").all();
 				} else
 					values = table.$(".tdColor", "allText").all();
-				if (!type.equals("StrokeReport")) {
-					for (int i = 0; i < names.size(); i++) {
-						logger.info(names.get(i) + ":" + values.get(i));
-
-					}
-				}
+				logger.info(type+Arrays.toString(names.toArray()));
+//				if (!type.equals("StrokeReport")) {
+//					for (int i = 0; i < names.size(); i++) {
+//						logger.info(names.get(i) + ":" + values.get(i));
+//
+//					}
+//				}
 
 				if (type.equals("StrokeFollowup")) {
 					List<String> v = new ArrayList<>();
@@ -161,8 +181,12 @@ public class CnstrokePageProcessor implements PageProcessor {
 					}
 					values = v;
 				}
-				if (type.equals("PhysicalExam") && values.size() == 10) {
+				if (type.equals("PhysicalExam") ) {
+					if(values.size() == 10)
 					values.add(4, "");
+					if(values.size() == 11){
+						values.add(10, "");
+					values.add(11, "");}
 				}
 				if (type.equals("StrokeReport")) {
 					values.add(6, table.$(".ACStudy", "allText").all().get(0));
@@ -170,6 +194,22 @@ public class CnstrokePageProcessor implements PageProcessor {
 						values.remove(13);
 					}
 				}
+				if (type.equals("FamilyHistory")) {
+					if (values.get(0).indexOf("否") >= 0) {
+						values.add(1, "");
+					}
+					if (values.get(2).indexOf("否") >= 0) {
+						values.add(3, "");
+					}
+					if (values.get(4).indexOf("否") >= 0) {
+						values.add(5, "");
+					}
+					if (values.get(6).indexOf("否") >= 0) {
+						values.add(7, "");
+					}
+				}
+				
+				
 				if (type.equals("LifeStyle")) {
 					if (values.get(0).indexOf("无") >= 0) {
 						values.add(1, "");

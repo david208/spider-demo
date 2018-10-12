@@ -53,27 +53,29 @@ public class HbaseUtils {
 
 	}
 	
-	public static void scan() throws IOException{
+	public static List<List> scan() throws IOException{
 		Scan scan=new Scan();
 		HTable table = (HTable) conn.getTable(TableName.valueOf("patient"));
 		ResultScanner resultScanner=table.getScanner(scan);
-	
+	List rows = new ArrayList<>();
 		for(Result result:resultScanner){
 			List<String> all = new ArrayList<String>();
 			Map<String,List> map = new TreeMap<>();
+			all.add(Bytes.toString(result.getRow()));
 			for(Cell cell:result.rawCells()){
 				List l = gson.fromJson(Bytes.toString(cell.getValue()),ArrayList.class);
-				if(Bytes.toString(cell.getQualifier()).equals("StrokeReport"))
+				//if(Bytes.toString(cell.getQualifier()).equals("StrokeFollowup"))
 				map.put(Bytes.toString(cell.getQualifier()), l);
 				
 			}
 			for(List list : map.values())
 			all.addAll(list);
 			System.out.println(all.size()+""+all);
+			rows.add(all);
 		}
 	
 		resultScanner.close();
-
+return rows;
 	}
 	
 	public static void createTable(String tableName, String[] family)
